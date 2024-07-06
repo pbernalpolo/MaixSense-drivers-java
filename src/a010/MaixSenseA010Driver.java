@@ -13,6 +13,16 @@ import jssc.SerialPortException;
 
 /**
  * Controls the MaixSense-A010 ToF camera.
+ * <p>
+ * The driver is used to send commands over the {@link SerialPort}.
+ * It also implements {@link SerialPortEventListener} to receive {@link MaixSenseA010Image}s over the {@link SerialPort}.
+ * The images are always received, but the only way for a user to access them is:
+ * <ul>
+ *  <li> Implementing the {@link MaixSenseA010ImageConsumer} interface,
+ *  <li> connecting a {@link MaixSenseA010ImageQueue} to this driver, and
+ *  <li> adding the {@link MaixSenseA010ImageConsumer} as a listener in the {@link MaixSenseA010ImageQueue}.
+ * </ul>
+ * See {@link DefaultConfigurationOfMaixSenseA010} for an example.
  * 
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/maixsense-a010.html</a>
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/at_command_en.html</a>
@@ -24,6 +34,10 @@ public class MaixSenseA010Driver
     ////////////////////////////////////////////////////////////////
     // PRIVATE CONSTANTS
     ////////////////////////////////////////////////////////////////
+    
+    /**
+     * Number of bytes needed for image packet info.
+     */
     private static final int BYTES_FOR_INFO = 16;
     
     
@@ -32,12 +46,18 @@ public class MaixSenseA010Driver
     ////////////////////////////////////////////////////////////////
     
     /**
-     * Serial port over which the communication is established.
+     * {@link SerialPort} over which the communication is established.
      */
     private SerialPort serialPort;
     
+    /**
+     * {@link MaixSenseA010ImageQueue} used to queue the {@link MaixSenseA010Image}s.
+     */
     private MaixSenseA010ImageQueue queue;
     
+    /**
+     * List of listeners that will consume the 
+     */
     private List<MaixSenseA010ImageConsumer> listeners;
     
     /**
@@ -55,30 +75,78 @@ public class MaixSenseA010Driver
      */
     private int receivingState;
     
+    /**
+     * Packet length received in the last image packet.
+     */
     private int currentPacketLength;
     
+    /**
+     * Length of the pixels array derived from {@link #currentPacketLength} and {@link #BYTES_FOR_INFO}.
+     */
     private int currentPixelsLength;
     
+    /**
+     * Counter used to keep track of the received pixels.
+     */
     private int pixelCounter;
     
+    /**
+     * Exposure time received in the last image packet info.
+     */
     private int exposureTimeReceived;
+    
+    /**
+     * Frame Id received in the last image packet info.
+     */
     private short frameIdReceived;
     
     private byte commandReceived;
     private byte outputModeReceived;
+    
+    /**
+     * ToF sensor temperature received in the last image packet info.
+     */
     private byte sensorTemperatureReceived;
+    
+    /**
+     * Driver temperature received in the last image packet info.
+     */
     private byte driverTemperatureReceived;
+    
+    /**
+     * Error code received in the last image packet info.
+     */
     private byte errorCodeReceived;
+    
     private byte reserved1ByteReceived;
+    
+    /**
+     * Rows of the image received in the last image packet info.
+     */
     private byte rowsReceived;
+    
+    /**
+     * Columns of the image received in the last image packet info.
+     */
     private byte colsReceived;
+    
     private byte ispVersionReceived;
     private byte reserved3ByteReceived;
     
+    /**
+     * Checksum received in the last image packet.
+     */
     private byte checksumComputed;
     
+    /**
+     * Array used to store the values of the pixels received in the last image packet info.
+     */
     private byte[] pixels;
     
+    /**
+     * Used to define the value that is sent with the AT+DISP command.
+     * Such command is used to enable/disable the LCD, USB, and UART communication.
+     */
     private byte disp;
     
     
@@ -141,6 +209,11 @@ public class MaixSenseA010Driver
     }
     
     
+    /**
+     * Connects the queue in which the received images are stored.
+     * 
+     * @param imageQueue    queue in which the received images are stored.
+     */
     public void connectQueue( MaixSenseA010ImageQueue imageQueue )
     {
         this.queue = imageQueue;
@@ -703,6 +776,11 @@ public class MaixSenseA010Driver
     }
     
     
+    /**
+     * Creates image from last image packet.
+     * 
+     * @return  image from last image packet.
+     */
     private MaixSenseA010Image getImageCurrent()
     {
         MaixSenseA010Image output = new MaixSenseA010Image( this.rowsReceived , this.colsReceived , this.pixels.clone() );

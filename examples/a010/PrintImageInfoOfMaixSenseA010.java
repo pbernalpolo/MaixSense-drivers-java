@@ -1,33 +1,37 @@
 package a010;
 
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import jssc.SerialPortException;
 
 
 
-public class PrintDepthMapOfMaixSenseA010
+/**
+ * Example of how to process images received from the MaixSense-A010 ToF camera.
+ */
+public class PrintImageInfoOfMaixSenseA010
     implements MaixSenseA010ImageConsumer
 {
     
-    
+    /**
+     * Entry point of the example.
+     */
     public static void main( String[] args )
     {
-        PrintDepthMapOfMaixSenseA010 printer = new PrintDepthMapOfMaixSenseA010();
-        /*
-        QueueNotifierDecorator<ImageOfMaixSenseA010> imageQueue = new QueueNotifierDecorator<ImageOfMaixSenseA010>( new ArrayDeque<ImageOfMaixSenseA010>() );
-        imageQueue.addListener( printer );
-        */
+        // Instantiate a MaixSenseA010ImageConsumer; in this case it is the PrintDepthMapOfMaixSenseA010 itself.
+        PrintImageInfoOfMaixSenseA010 printer = new PrintImageInfoOfMaixSenseA010();
+        
+        // Create the image queue,
         MaixSenseA010ImageQueue imageQueue = new MaixSenseA010ImageQueue();
+        // and add the listener.
         imageQueue.addListener( printer );
         
+        // Create the driver,
         MaixSenseA010Driver a010 = new MaixSenseA010Driver( "/dev/ttyUSB0" );
+        // and connect the queue so that received images are added to it.
         a010.connectQueue( imageQueue );
         
+        // Configure the MaixSense-A010 ToF camera.
         try {
-            
             a010.initialize();
             
             a010.setImageSignalProcessorOn();
@@ -39,16 +43,17 @@ public class PrintDepthMapOfMaixSenseA010
             a010.setBinning100x100();
             a010.setFps( 20 );
             
-            Thread.sleep( 4000 );
-            
-            //a010.terminate();
-            
-        } catch( SerialPortException | InterruptedException e ) {
+        } catch( SerialPortException e ) {
             e.printStackTrace();
         }
     }
     
     
+    /**
+     * {@inheritDoc}
+     * <p>
+     * In this example, we jut print the image info.
+     */
     public void consumeImage( MaixSenseA010Image image )
     {
         System.out.println( "Frame ID: " + image.frameId() );
@@ -59,5 +64,5 @@ public class PrintDepthMapOfMaixSenseA010
         System.out.println( "Error code: " + image.errorCode() );
         System.out.println();
     }
-
+    
 }

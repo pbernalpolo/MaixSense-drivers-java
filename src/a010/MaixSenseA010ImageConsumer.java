@@ -1,5 +1,7 @@
 package a010;
 
+
+
 /**
  * Represents entities that will consume images from a queue.
  * <p>
@@ -11,6 +13,11 @@ public interface MaixSenseA010ImageConsumer
     // PUBLIC ABSTRACT METHODS
     ////////////////////////////////////////////////////////////////
     
-    public void onImageQueued( MaixSenseA010Image image );
+    /**
+     * Consumes the {@link MaixSenseA010Image} polled from the queue.
+     * 
+     * @param image     {@link MaixSenseA010Image} to be consumed.
+     */
+    public void consumeImage( MaixSenseA010Image image );
     
 }

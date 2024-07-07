@@ -23,6 +23,8 @@ import jssc.SerialPortException;
  *  <li> adding the {@link MaixSenseA010ImageConsumer} as a listener in the {@link MaixSenseA010ImageQueue}.
  * </ul>
  * See {@link DefaultConfigurationOfMaixSenseA010} for an example.
+ * <p>
+ * The image consumption is implemented using the producer-consumer design pattern.
  * 
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/maixsense-a010.html</a>
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/at_command_en.html</a>

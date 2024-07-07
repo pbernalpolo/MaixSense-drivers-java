@@ -49,7 +49,7 @@ public class PrintDepthMapOfMaixSenseA010
     }
     
     
-    public void onImageQueued( MaixSenseA010Image image )
+    public void consumeImage( MaixSenseA010Image image )
     {
         System.out.println( "Frame ID: " + image.frameId() );
         System.out.println( "Image size: " + image.rows() + " x " + image.cols() );

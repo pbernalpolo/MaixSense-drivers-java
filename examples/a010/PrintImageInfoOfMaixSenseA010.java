@@ -17,7 +17,7 @@ public class PrintImageInfoOfMaixSenseA010
      */
     public static void main( String[] args )
     {
-        // Instantiate a MaixSenseA010ImageConsumer; in this case it is the PrintDepthMapOfMaixSenseA010 itself.
+        // Instantiate a MaixSenseA010ImageConsumer; in this case it is the PrintImageInfoOfMaixSenseA010 itself.
         PrintImageInfoOfMaixSenseA010 printer = new PrintImageInfoOfMaixSenseA010();
         
         // Create the image queue,

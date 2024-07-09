@@ -1,6 +1,9 @@
 package a010;
 
 
+import util.DepthImage;
+
+
 
 /**
  * Contains an image provided by the MaixSenseA010 ToF camera.
@@ -8,6 +11,7 @@ package a010;
  * It contains both, the pixel data, and more info such as the frame ID.
  */
 public class MaixSenseA010Image
+    implements DepthImage
 {
     ////////////////////////////////////////////////////////////////
     // PRIVATE VARIABLES

@@ -78,16 +78,6 @@ public class MaixSenseA010Driver
     private int receivingState;
     
     /**
-     * Packet length received in the last image packet.
-     */
-    private int currentPacketLength;
-    
-    /**
-     * Length of the pixels array derived from {@link #currentPacketLength} and {@link #BYTES_FOR_INFO}.
-     */
-    private int currentPixelsLength;
-    
-    /**
      * Counter used to keep track of the received pixels.
      */
     private int pixelCounter;
@@ -194,8 +184,6 @@ public class MaixSenseA010Driver
                 SerialPort.STOPBITS_1 ,
                 SerialPort.PARITY_NONE );
         this.serialPort.addEventListener( this , SerialPort.MASK_RXCHAR );
-        // Default image size.
-        this.setBinning100x100();
     }
     
     
@@ -247,29 +235,19 @@ public class MaixSenseA010Driver
     
     public void setBinning100x100()
     {
-        boolean success = this.sendCommand( "AT+BINN=1\r" , "Failed setBinning100x100." );
-        if( success ) {
-            this.pixels = new byte[ 100 * 100 ];
-        }
-        
+        this.sendCommand( "AT+BINN=1\r" , "Failed setBinning100x100." );
     }
     
     
     public void setBinning50x50()
     {
-        boolean success = this.sendCommand( "AT+BINN=2\r" , "Failed setBinning50x50." );
-        if( success ) {
-            this.pixels = new byte[ 50 * 50 ];
-        }
+        this.sendCommand( "AT+BINN=2\r" , "Failed setBinning50x50." );
     }
     
     
     public void setBinning25x25()
     {
-        boolean success = this.sendCommand( "AT+BINN=4\r" , "Failed setBinning25x25." );
-        if( success ) {
-            this.pixels = new byte[ 25 * 25 ];
-        }
+        this.sendCommand( "AT+BINN=4\r" , "Failed setBinning25x25." );
     }
     
     
@@ -511,14 +489,12 @@ public class MaixSenseA010Driver
      * @param errorMessageOnFailure     error message printed if there is a failure on sending the AT command.
      * @return  true if the AT command is successfully sent; false otherwise.
      */
-    private boolean sendCommand( String atCommand , String errorMessageOnFailure )
+    private void sendCommand( String atCommand , String errorMessageOnFailure )
     {
         try {
             this.serialPort.writeString( atCommand );
-            return true;
         } catch( SerialPortException e ) {
             System.out.println( errorMessageOnFailure );
-            return false;
         }
     }
     
@@ -635,9 +611,12 @@ public class MaixSenseA010Driver
             // Read 2 bytes.
             byte[] byteRead = this.serialPort.readBytes( 2 );
             // Build packet length from them,
-            this.currentPacketLength = ( ( byteRead[1] << 8 ) | (byteRead[0] & 0xFF) );
-            // and also pixels length.
-            this.currentPixelsLength = this.currentPacketLength - BYTES_FOR_INFO;
+            int receivedLength = ( ( byteRead[1] << 8 ) | (byteRead[0] & 0xFF) );
+            // and update pixels variable if necessary.
+            int pixelsLength = receivedLength - BYTES_FOR_INFO;
+            if(  this.pixels == null  ||  this.pixels.length != pixelsLength  ) {
+                this.pixels = new byte[ pixelsLength ];
+            }
             // Update checksum.
             this.checksumComputed += byteRead[0];
             this.checksumComputed += byteRead[1];
@@ -702,7 +681,7 @@ public class MaixSenseA010Driver
     {
         // Iterate while there are bytes to read and the pixels are still not complete.
         int bytesToRead = this.serialPort.getInputBufferBytesCount();
-        int bytesToCompletion = this.currentPixelsLength - this.pixelCounter;
+        int bytesToCompletion = this.pixels.length - this.pixelCounter;
         while(  bytesToRead > 0  &&  bytesToCompletion > 0  ) {
             /* Store in bytesToRead the minimum of bytesToRead and bytesToCompletion.
              * This makes that we don't read more bytes than bytes that are in the buffer (bytesToRead is minimum),
@@ -723,10 +702,10 @@ public class MaixSenseA010Driver
             }
             // Update bytesToRead and bytesToCompletion for next iteration.
             bytesToRead = this.serialPort.getInputBufferBytesCount();
-            bytesToCompletion = this.currentPixelsLength - this.pixelCounter;
+            bytesToCompletion = this.pixels.length - this.pixelCounter;
         }
         // If we completed the pixels,
-        if( this.pixelCounter == this.currentPixelsLength ) {
+        if( this.pixelCounter == this.pixels.length ) {
             // go to receive the checksum.
             this.receivingState = 5;
         }

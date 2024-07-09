@@ -45,13 +45,20 @@ public class MaixSenseA010DefaultCalibration
         List<RealVector3> pointCloud = new ArrayList<RealVector3>();
         for( int i=0; i<image.rows(); i++ ) {
             for( int j=0; j<image.cols(); j++ ) {
+                // Take pixel byte and cast its unsigned representation to an int.
                 int depthValue = image.pixel(i,j) & 0xff ;
+                // We build the point cloud from not saturated values.
+                if( depthValue == 0  ||  255 == depthValue  ) {
+                    continue;
+                }
+                // Build the RealVector3 from the (i,j)-th index and the depth value.
                 double depth = DEPTH_RANGE_MIN + depthValue/255.0 * ( DEPTH_RANGE_MAX - DEPTH_RANGE_MIN );
                 RealVector3 point = new RealVector3(
                         (j-0.5*image.cols())/image.cols() * X_SCREEN_SIZE_AT_1M ,
                         (i-0.5*image.rows())/image.rows() * Y_SCREEN_SIZE_AT_1M ,
                         1.0 );
                 point.scaleInplace( depth / point.norm() );
+                // Add the point to the point cloud.
                 pointCloud.add( point );
             }
         }

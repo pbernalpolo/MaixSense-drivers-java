@@ -1,9 +1,6 @@
 package a010;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
@@ -42,6 +39,17 @@ public class MaixSenseA010Driver
      */
     private static final int BYTES_FOR_INFO = 16;
     
+    /**
+     * Minimum {@link #pixels} length value.
+     */
+    private static final int PIXELS_LENGTH_MIN = 25 * 25;
+    
+    /**
+     * Maximum {@link #pixels} length value.
+     */
+    private static final int PIXELS_LENGTH_MAX = 100 * 100;
+    
+    
     
     ////////////////////////////////////////////////////////////////
     // PRIVATE VARIABLES
@@ -56,11 +64,6 @@ public class MaixSenseA010Driver
      * {@link MaixSenseA010ImageQueue} used to queue the {@link MaixSenseA010Image}s.
      */
     private MaixSenseA010ImageQueue queue;
-    
-    /**
-     * List of listeners that will consume the 
-     */
-    private List<MaixSenseA010ImageConsumer> listeners;
     
     /**
      * State of the finite-state machine used to manage the image packet reception.
@@ -155,7 +158,6 @@ public class MaixSenseA010Driver
     public MaixSenseA010Driver( String serialPortPath )
     {
         this.serialPort = new SerialPort( serialPortPath );
-        this.listeners = new ArrayList<MaixSenseA010ImageConsumer>();
         this.receivingState = 0;
         // Default initial value is LCD display on.
         this.disp = (byte)0b00000001;
@@ -233,18 +235,27 @@ public class MaixSenseA010Driver
     }
     
     
+    /**
+     * Sets the size of depth images to be received to 100 x 100 pixels^2.
+     */
     public void setBinning100x100()
     {
         this.sendCommand( "AT+BINN=1\r" , "Failed setBinning100x100." );
     }
     
     
+    /**
+     * Sets the size of depth images to be received to 50 x 50 pixels^2.
+     */
     public void setBinning50x50()
     {
         this.sendCommand( "AT+BINN=2\r" , "Failed setBinning50x50." );
     }
     
     
+    /**
+     * Sets the size of depth images to be received to 25 x 25 pixels^2.
+     */
     public void setBinning25x25()
     {
         this.sendCommand( "AT+BINN=4\r" , "Failed setBinning25x25." );
@@ -404,23 +415,27 @@ public class MaixSenseA010Driver
     }
     
     
-    public void setQuantizationUnitAuto()
-    {
-        this.sendCommand( "AT+UNIT=0\r" , "Failed setQuantizationUnitAuto." );
-    }
-    
-    
+    /**
+     * Sets the quantization unit.
+     * <p>
+     * The quantization unit is used to compute the pixel value from a depth measurement as described in
+     * <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/at_command_en.html#UNIT-directive</a>.
+     * That is,
+     * <ul>
+     *  <li> If quantization unit is 0,  pixelValue = 5.1 * sqrt( depth )
+     *  <li> Otherwise,  pixelValue = depth / quantizationUnit
+     * </ul>
+     * 
+     * @param unit  quantization unit used to compute the pixel value from depth measurements.
+     */
     public void setQuantizationUnit( int unit )
     {
-        if( unit < 1 ) {
-            unit = 1;
-            System.out.println( "Quantization unit must be in [1,10] interval; unit set to 1." );
+        if(  0 <= unit  &&  unit <= 9  ) {
+            this.sendCommand( "AT+UNIT=" + unit + "\r" , "Failed setQuantizationUnit." );
+        } else {
+            this.sendCommand( "AT+UNIT=0\r" , "Failed setQuantizationUnit." );
+            System.out.println( "Quantization unit must be in [0,10] interval; unit set to 0." );
         }
-        if( unit > 10 ) {
-            unit = 10;
-            System.out.println( "Quantization unit must be in [1,10] interval; unit set to 10." );
-        }
-        this.sendCommand( "AT+UNIT=" + unit + "\r" , "Failed setQuantizationUnitAuto." );
     }
     
     
@@ -610,18 +625,25 @@ public class MaixSenseA010Driver
         if( this.serialPort.getInputBufferBytesCount() >= 2 ) {
             // Read 2 bytes.
             byte[] byteRead = this.serialPort.readBytes( 2 );
-            // Build packet length from them,
+            // Build packet length from them.
             int receivedLength = ( ( byteRead[1] << 8 ) | (byteRead[0] & 0xFF) );
-            // and update pixels variable if necessary.
+            // Compute number of pixels to receive.
             int pixelsLength = receivedLength - BYTES_FOR_INFO;
-            if(  this.pixels == null  ||  this.pixels.length != pixelsLength  ) {
-                this.pixels = new byte[ pixelsLength ];
+            // Check that pixelsLength is within bounds.
+            if(  PIXELS_LENGTH_MIN <= pixelsLength  &&  pixelsLength <= PIXELS_LENGTH_MAX  ) {
+                // Update pixels variable if necessary.
+                if(  this.pixels == null  ||  this.pixels.length != pixelsLength  ) {
+                    this.pixels = new byte[ pixelsLength ];
+                }
+                // Update checksum.
+                this.checksumComputed += byteRead[0];
+                this.checksumComputed += byteRead[1];
+                // And go to receive the packet info.
+                this.receivingState = 3;
+            } else {
+                // If pixelsLength is not in bounds, go to receive first header byte.
+                this.receivingState = 0;
             }
-            // Update checksum.
-            this.checksumComputed += byteRead[0];
-            this.checksumComputed += byteRead[1];
-            // And go to receive the packet info.
-            this.receivingState = 3;
         }
     }
     

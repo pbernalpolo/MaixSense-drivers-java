@@ -130,8 +130,8 @@ public class MaixSenseA010Driver
      */
     private short frameIdReceived;
     
-    private byte commandReceived;
-    private byte outputModeReceived;
+    //private byte commandReceived;
+    //private byte outputModeReceived;
     
     /**
      * ToF sensor temperature received in the last image packet info.
@@ -148,7 +148,7 @@ public class MaixSenseA010Driver
      */
     private byte errorCodeReceived;
     
-    private byte reserved1ByteReceived;
+    //private byte reserved1ByteReceived;
     
     /**
      * Rows of the image received in the last image packet info.
@@ -160,8 +160,8 @@ public class MaixSenseA010Driver
      */
     private byte colsReceived;
     
-    private byte ispVersionReceived;
-    private byte reserved3ByteReceived;
+    //private byte ispVersionReceived;
+    //private byte reserved3ByteReceived;
     
     /**
      * Checksum received in the last image packet.
@@ -295,18 +295,6 @@ public class MaixSenseA010Driver
     {
         this.sendCommand( "AT+BINN=4\r" , "Failed setBinning25x25." );
     }
-    
-    
-    /*public void getBinningCurrent()
-    {
-        this.sendCommand( "AT+BINN?" , "Failed getBinningCurrent." );
-    }
-    
-    
-    public void getBinningSupported()
-    {
-        this.sendCommand( "AT+BINN=?" , "Failed getBinningSupported." );
-    }*/
     
     
     /**
@@ -496,18 +484,45 @@ public class MaixSenseA010Driver
     
     
     /**
+     * Activates the anti-multi-machine interference.
+     */
+    public void setAntiMultiMachineInterferenceOff()
+    {
+        this.sendCommand( "AT+ANTIMMI=0\r" , "Failed setAntiMultiMachineInterferenceOff." );
+    }
+    
+    
+    /**
+     * Deactivates the anti-multi-machine interference.
+     */
+    public void setAntiMultiMachineInterferenceOn()
+    {
+        this.sendCommand( "AT+ANTIMMI=1\r" , "Failed setAntiMultiMachineInterferenceOn." );
+    }
+    
+    
+    /**
+     * Sets the exposure value of the camera.
+     * 
+     * @param value     exposure value.
+     */
+    public void setExposureValue( int value )
+    {
+        if(  value < 0  ||  40000 < value  ) {
+            value = 0;
+            System.out.println( "Exposure value must be in the interval [0,40000]; exposure value set to 0 (auto exposure)." );
+        }
+        this.sendCommand( "AT+EV=" + value + "\r" , "Failed setExposureValue." );
+    }
+    
+    
+    /**
      * Saves current configuration in MaixSense-A010 ToF camera.
      */
     public void saveConfiguration()
     {
-        this.sendCommand( "AT+SAVE" , "Failed saveConfiguration." );
+        this.sendCommand( "AT+SAVE\r" , "Failed saveConfiguration." );
     }
-    
-    
-    /*public void setAntiMultiMachineInterference()
-    {
-        
-    }*/
     
     
     /**
@@ -699,8 +714,8 @@ public class MaixSenseA010Driver
             // Get next 16 bytes.
             byte[] byteRead = this.serialPort.readBytes( BYTES_FOR_INFO );
             // Extract the info according to the documentation.
-            this.commandReceived = byteRead[0];
-            this.outputModeReceived = byteRead[1];
+            //this.commandReceived = byteRead[0];
+            //this.outputModeReceived = byteRead[1];
             this.sensorTemperatureReceived = byteRead[2];
             this.driverTemperatureReceived = byteRead[3];
             this.exposureTimeReceived = (
@@ -709,12 +724,12 @@ public class MaixSenseA010Driver
                     ( (byteRead[5] & 0xFF) << 8 ) |
                     (byteRead[4] & 0xFF) );
             this.errorCodeReceived = byteRead[8];
-            this.reserved1ByteReceived = byteRead[9];
+            //this.reserved1ByteReceived = byteRead[9];
             this.rowsReceived = byteRead[10];
             this.colsReceived = byteRead[11];
             this.frameIdReceived = (short)( ( byteRead[13] << 8 ) | (byteRead[12] & 0xFF) );
-            this.ispVersionReceived = byteRead[14];
-            this.reserved3ByteReceived = byteRead[15];
+            //this.ispVersionReceived = byteRead[14];
+            //this.reserved3ByteReceived = byteRead[15];
             // Update checksum.
             for( int i=0; i<BYTES_FOR_INFO; i++ ) {
                 this.checksumComputed += byteRead[i];

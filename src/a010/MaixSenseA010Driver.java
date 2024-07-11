@@ -49,6 +49,41 @@ public class MaixSenseA010Driver
      */
     private static final int PIXELS_LENGTH_MAX = 100 * 100;
     
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the first header byte.
+     */
+    private static final int RECEIVING_FIRST_HEADER_BYTE_STATE = 1;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the second header byte.
+     */
+    private static final int RECEIVING_SECOND_HEADER_BYTE_STATE = 2;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the packet length.
+     */
+    private static final int RECEIVING_PACKET_LENGTH_STATE = 3;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the packet info byte.
+     */
+    private static final int RECEIVING_PACKET_INFO_STATE = 4;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the packet pixels.
+     */
+    private static final int RECEIVING_PACKET_PIXELS_STATE = 5;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the checksum.
+     */
+    private static final int RECEIVING_CHECKSUM_STATE = 6;
+    
+    /**
+     * Represents the state of the finite-state machine in which we are receiving the tail byte.
+     */
+    private static final int RECEIVING_TAIL_BYTE_STATE = 0;
+    
     
     
     ////////////////////////////////////////////////////////////////
@@ -535,30 +570,30 @@ public class MaixSenseA010Driver
     {
         while( this.serialPort.getInputBufferBytesCount() > 0 ) {
             switch( this.receivingState ) {
-                case 0:     // Receiving first header byte.
+                case RECEIVING_FIRST_HEADER_BYTE_STATE:
                     this.receiveFirstHeaderByteBehavior();
                     break;
-                case 1:     // Receiving second header byte.
+                case RECEIVING_SECOND_HEADER_BYTE_STATE:
                     this.receiveSecondHeaderByteBehavior();
                     break;
-                case 2:     // Receiving packet length.
+                case RECEIVING_PACKET_LENGTH_STATE:
                     this.receivePacketLengthBehavior();
                     break;
-                case 3:     // Receiving packet info.
+                case RECEIVING_PACKET_INFO_STATE:
                     this.receivePacketInfoBehavior();
                     break;
-                case 4:     // Receiving pixels.
+                case RECEIVING_PACKET_PIXELS_STATE:
                     this.receivePixelsBehavior();
                     break;
-                case 5:     // Receiving checksum.
+                case RECEIVING_CHECKSUM_STATE:
                     this.receiveChecksumBehavior();
                     break;
-                case 6:     // Receiving tail byte.
+                case RECEIVING_TAIL_BYTE_STATE:
                     this.receiveTailByteBehavior();
                     break;
                 default:
-                    // If we are in some other state, go to receive first header byte.
-                    this.receivingState = 0;
+                    // If we are in some other state, go to receive tail byte.
+                    this.receivingState = RECEIVING_TAIL_BYTE_STATE;
             }
         }
     }
@@ -578,10 +613,11 @@ public class MaixSenseA010Driver
         byte[] byteRead = this.serialPort.readBytes( 1 );
         // If the received byte is 0x00, then we go to receive second header byte.
         if( byteRead[0] == (byte)0x00 ) {
-            // Initialize checksum.
-            this.checksumComputed = 0;
             // Go to receive second header byte.
-            this.receivingState = 1;
+            this.receivingState = RECEIVING_SECOND_HEADER_BYTE_STATE;
+        } else {
+            // If not, fall back to receive tail byte.
+            this.receivingState = RECEIVING_TAIL_BYTE_STATE;
         }
     }
     
@@ -600,13 +636,13 @@ public class MaixSenseA010Driver
         byte[] byteRead = this.serialPort.readBytes( 1 );
         // If the received byte is 0xFF, then we go to receive packet length.
         if( byteRead[0] == (byte)0xFF ) {
-            // Add byte to checksum.
-            this.checksumComputed += byteRead[0];
+            // Initialize checksum.
+            this.checksumComputed = (byte)0xFF;
             // Go to receive packet length.
-            this.receivingState = 2;
+            this.receivingState = RECEIVING_PACKET_LENGTH_STATE;
         } else {
-            // If not 0xFF, go back to receive first header byte.
-            this.receivingState = 0;
+            // If not 0xFF, go back to receive tail byte.
+            this.receivingState = RECEIVING_TAIL_BYTE_STATE;
         }
     }
     
@@ -639,10 +675,10 @@ public class MaixSenseA010Driver
                 this.checksumComputed += byteRead[0];
                 this.checksumComputed += byteRead[1];
                 // And go to receive the packet info.
-                this.receivingState = 3;
+                this.receivingState = RECEIVING_PACKET_INFO_STATE;
             } else {
-                // If pixelsLength is not in bounds, go to receive first header byte.
-                this.receivingState = 0;
+                // If pixelsLength is not in bounds, go to receive tail byte.
+                this.receivingState = RECEIVING_TAIL_BYTE_STATE;
             }
         }
     }
@@ -686,7 +722,7 @@ public class MaixSenseA010Driver
             // Initialize pixel counter.
             this.pixelCounter = 0;
             // And go to receive pixels.
-            this.receivingState = 4;
+            this.receivingState = RECEIVING_PACKET_PIXELS_STATE;
         }
     }
     
@@ -729,7 +765,7 @@ public class MaixSenseA010Driver
         // If we completed the pixels,
         if( this.pixelCounter == this.pixels.length ) {
             // go to receive the checksum.
-            this.receivingState = 5;
+            this.receivingState = RECEIVING_CHECKSUM_STATE;
         }
     }
     
@@ -753,12 +789,9 @@ public class MaixSenseA010Driver
                 MaixSenseA010Image image = this.getImageCurrent();
                 this.queue.add( image );
             }
-            // and go to receive tail byte.
-            this.receivingState = 6;
-        } else {
-            // Otherwise, go to receive first header byte.
-            this.receivingState = 0;
         }
+        // Whatever the result of the checksum, we go to receive the tail byte.
+        this.receivingState = RECEIVING_TAIL_BYTE_STATE;
     }
     
     
@@ -772,10 +805,13 @@ public class MaixSenseA010Driver
     private void receiveTailByteBehavior()
             throws SerialPortException
     {
-        // Read byte that holds the checksum.
+        // Get next byte.
         byte[] byteRead = this.serialPort.readBytes( 1 );
-        // Go to receive first header byte.
-        this.receivingState = 0;
+        // If the received byte is 0xDD,
+        if( byteRead[0] == (byte)0xDD ) {
+            // go to receive first header byte.
+            this.receivingState = RECEIVING_FIRST_HEADER_BYTE_STATE;
+        }
     }
     
     

@@ -503,6 +503,11 @@ public class MaixSenseA010Driver
     
     /**
      * Sets the exposure value of the camera.
+     * <p>
+     * <ul>
+     *  <li> If input value is 0, then the exposure value is automatically chosen.
+     *  <li> Otherwise, the input value is set for the exposure time.
+     * </ul>
      * 
      * @param value     exposure value.
      */

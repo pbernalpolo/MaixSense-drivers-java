@@ -39,6 +39,15 @@ public class DefaultConfigurationOfMaixSenseA010
             // Sets frames per second to 20 (images/second).
             a010.setFps( 20 );
             
+            // Sets the quantization unit used to relate the pixel value to a depth measurement.
+            a010.setQuantizationUnit( 0 );
+            
+            // Deactivates the anti-multi-machine interference.
+            a010.setAntiMultiMachineInterferenceOff();
+            
+            // Sets the exposure value to automatic exposure.
+            a010.setExposureTimeAutoOn();
+            
             // Terminates the serial communication.
             a010.terminate();
             

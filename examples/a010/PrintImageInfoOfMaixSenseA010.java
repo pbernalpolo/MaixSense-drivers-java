@@ -42,6 +42,10 @@ public class PrintImageInfoOfMaixSenseA010
             
             a010.setBinning100x100();
             a010.setFps( 20 );
+            a010.setQuantizationUnit( 0 );
+            a010.setAntiMultiMachineInterferenceOff();
+            //a010.setAntiMultiMachineInterferenceOn();
+            a010.setExposureTimeAutoOn();
             
         } catch( SerialPortException e ) {
             e.printStackTrace();

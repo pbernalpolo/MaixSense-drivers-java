@@ -502,23 +502,45 @@ public class MaixSenseA010Driver
     
     
     /**
-     * Sets the exposure value of the camera.
+     * Activates the auto exposure time algorithm.
      * <p>
-     * <ul>
-     *  <li> If input value is 0, then the exposure value is automatically chosen.
-     *  <li> Otherwise, the input value is set for the exposure time.
-     * </ul>
-     * 
-     * @param value     exposure value.
+     * The exposure time will be automatically set depending on the environment conditions.
      */
-    public void setExposureValue( int value )
+    public void setExposureTimeAutoOn()
     {
-        if(  value < 0  ||  40000 < value  ) {
-            value = 0;
-            System.out.println( "Exposure value must be in the interval [0,40000]; exposure value set to 0 (auto exposure)." );
-        }
-        this.sendCommand( "AT+EV=" + value + "\r" , "Failed setExposureValue." );
+        this.sendCommand( "AT+AE=1\r" , "Failed setExposureTimeAuto AE." );
+        //this.sendCommand( "AT+EV=0\r" , "Failed setExposureTimeAuto EV." );
     }
+    
+    
+    /**
+     * Deactivates the auto exposure time algorithm.
+     * <p>
+     * The exposure time will take the last value set by the auto-exposure algorithm.
+     */
+    public void setExposureTimeAutoOff()
+    {
+        this.sendCommand( "AT+AE=0\r" , "Failed setExposureTimeAuto AE." );
+    }
+    
+    
+    /**
+     * Sets the exposure time.
+     * <p>
+     * The exposure time is fixed, and its value is the input value.
+     * 
+     * @param value     exposure time.
+     */
+    // TODO: implement working setExposureTime
+    /*public void setExposureTime( int value )
+    {
+        if(  value < 1  ||  40000 < value  ) {
+            value = 1;
+            System.out.println( "Exposure time must be in the interval [1,40000]; exposure value set to 1." );
+        }
+        this.sendCommand( "AT+AE=0\r" , "Failed setExposureTime AE." );
+        this.sendCommand( "AT+EV=" + value + "\r" , "Failed setExposureTime EV." );
+    }*/
     
     
     /**

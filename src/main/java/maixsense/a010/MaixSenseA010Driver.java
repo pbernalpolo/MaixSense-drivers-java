@@ -5,7 +5,6 @@ import jssc.SerialPort;
 import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
-import maixsense.a010.DefaultConfigurationOfMaixSenseA010;
 
 
 

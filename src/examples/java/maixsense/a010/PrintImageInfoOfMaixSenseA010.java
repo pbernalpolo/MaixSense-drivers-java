@@ -1,7 +1,11 @@
-package a010;
+package maixsense.a010;
 
 
 import jssc.SerialPortException;
+import maixsense.a010.MaixSenseA010Driver;
+import maixsense.a010.MaixSenseA010Image;
+import maixsense.a010.MaixSenseA010ImageConsumer;
+import maixsense.a010.MaixSenseA010ImageQueue;
 
 
 

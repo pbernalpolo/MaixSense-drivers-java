@@ -1,4 +1,4 @@
-package a010;
+package maixsense.a010;
 
 
 import util.DepthImage;

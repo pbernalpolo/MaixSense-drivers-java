@@ -1,6 +1,8 @@
 package maixsense.a010;
 
 
+import java.nio.ByteBuffer;
+
 import jssc.SerialPort;
 import jssc.SerialPortEvent;
 import jssc.SerialPortEventListener;
@@ -33,11 +35,6 @@ public class MaixSenseA010Driver
     ////////////////////////////////////////////////////////////////
     // PRIVATE CONSTANTS
     ////////////////////////////////////////////////////////////////
-    
-    /**
-     * Number of bytes needed for image packet info.
-     */
-    private static final int BYTES_FOR_INFO = 16;
     
     /**
      * Minimum {@link #pixels} length value.
@@ -84,6 +81,8 @@ public class MaixSenseA010Driver
      */
     private static final int RECEIVING_TAIL_BYTE_STATE = 0;
     
+    private static final int[] BYTES_NEEDED_FOR_STATE = { 1 , 1 , 1 , 2 , 16 , 1 , 1 };
+    
     
     
     ////////////////////////////////////////////////////////////////
@@ -99,6 +98,8 @@ public class MaixSenseA010Driver
      * {@link MaixSenseA010ImageQueue} used to queue the {@link MaixSenseA010Image}s.
      */
     private MaixSenseA010ImageQueue queue;
+    
+    private ByteBuffer byteBuffer;
     
     /**
      * State of the finite-state machine used to manage the image packet reception.
@@ -193,6 +194,7 @@ public class MaixSenseA010Driver
     public MaixSenseA010Driver( String serialPortPath )
     {
         this.serialPort = new SerialPort( serialPortPath );
+        this.byteBuffer = ByteBuffer.allocate( 1 << 16 );
         this.receivingState = 0;
         // Default initial value is LCD display on.
         this.disp = (byte)0b00000001;
@@ -610,7 +612,12 @@ public class MaixSenseA010Driver
     private void updateFromInputBytes()
             throws SerialPortException
     {
-        while( this.serialPort.getInputBufferBytesCount() > 0 ) {
+        // This method is called after a serialEvent in which the event isRXCHAR, so we have for sure received bytes.
+        this.byteBuffer.put( this.serialPort.readBytes() );
+        // Switch to reading mode.
+        this.byteBuffer.flip();
+        // Update state.
+        while( this.byteBuffer.remaining() >= BYTES_NEEDED_FOR_STATE[ this.receivingState ] ) {
             switch( this.receivingState ) {
                 case RECEIVING_FIRST_HEADER_BYTE_STATE:
                     this.receiveFirstHeaderByteBehavior();
@@ -638,6 +645,8 @@ public class MaixSenseA010Driver
                     this.receivingState = RECEIVING_TAIL_BYTE_STATE;
             }
         }
+        // Switch back to writing mode.
+        this.byteBuffer.compact();
     }
     
     
@@ -652,9 +661,9 @@ public class MaixSenseA010Driver
             throws SerialPortException
     {
         // Get next byte.
-        byte[] byteRead = this.serialPort.readBytes( 1 );
+        byte nextByte = this.byteBuffer.get();
         // If the received byte is 0x00, then we go to receive second header byte.
-        if( byteRead[0] == (byte)0x00 ) {
+        if( nextByte == (byte)0x00 ) {
             // Go to receive second header byte.
             this.receivingState = RECEIVING_SECOND_HEADER_BYTE_STATE;
         } else {
@@ -675,9 +684,9 @@ public class MaixSenseA010Driver
             throws SerialPortException
     {
         // Get next byte.
-        byte[] byteRead = this.serialPort.readBytes( 1 );
+        byte nextByte = this.byteBuffer.get();
         // If the received byte is 0xFF, then we go to receive packet length.
-        if( byteRead[0] == (byte)0xFF ) {
+        if( nextByte == (byte)0xFF ) {
             // Initialize checksum.
             this.checksumComputed = (byte)0xFF;
             // Go to receive packet length.
@@ -699,29 +708,27 @@ public class MaixSenseA010Driver
     private void receivePacketLengthBehavior()
             throws SerialPortException
     {
-        // Packet length is described using 2 bytes.
-        if( this.serialPort.getInputBufferBytesCount() >= 2 ) {
-            // Read 2 bytes.
-            byte[] byteRead = this.serialPort.readBytes( 2 );
-            // Build packet length from them.
-            int receivedLength = ( ( byteRead[1] << 8 ) | (byteRead[0] & 0xFF) );
-            // Compute number of pixels to receive.
-            int pixelsLength = receivedLength - BYTES_FOR_INFO;
-            // Check that pixelsLength is within bounds.
-            if(  PIXELS_LENGTH_MIN <= pixelsLength  &&  pixelsLength <= PIXELS_LENGTH_MAX  ) {
-                // Update pixels variable if necessary.
-                if(  this.pixels == null  ||  this.pixels.length != pixelsLength  ) {
-                    this.pixels = new byte[ pixelsLength ];
-                }
-                // Update checksum.
-                this.checksumComputed += byteRead[0];
-                this.checksumComputed += byteRead[1];
-                // And go to receive the packet info.
-                this.receivingState = RECEIVING_PACKET_INFO_STATE;
-            } else {
-                // If pixelsLength is not in bounds, go to receive tail byte.
-                this.receivingState = RECEIVING_TAIL_BYTE_STATE;
+        // Get 2 bytes.
+        byte[] nextBytes = new byte[ BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_LENGTH_STATE ] ];
+        this.byteBuffer.get( nextBytes );
+        // Build packet length from them.
+        int receivedLength = ( ( nextBytes[1] << 8 ) | (nextBytes[0] & 0xFF) );
+        // Compute number of pixels to receive.
+        int pixelsLength = receivedLength - BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_INFO_STATE ];
+        // Check that pixelsLength is within bounds.
+        if(  PIXELS_LENGTH_MIN <= pixelsLength  &&  pixelsLength <= PIXELS_LENGTH_MAX  ) {
+            // Update pixels variable if necessary.
+            if(  this.pixels == null  ||  this.pixels.length != pixelsLength  ) {
+                this.pixels = new byte[ pixelsLength ];
             }
+            // Update checksum.
+            this.checksumComputed += nextBytes[0];
+            this.checksumComputed += nextBytes[1];
+            // And go to receive the packet info.
+            this.receivingState = RECEIVING_PACKET_INFO_STATE;
+        } else {
+            // If pixelsLength is not in bounds, go to receive tail byte.
+            this.receivingState = RECEIVING_TAIL_BYTE_STATE;
         }
     }
     
@@ -736,36 +743,34 @@ public class MaixSenseA010Driver
     private void receivePacketInfoBehavior()
             throws SerialPortException
     {
-        // Info is packed in 16 bytes.
-        if( this.serialPort.getInputBufferBytesCount() >= BYTES_FOR_INFO ) {
-            // Get next 16 bytes.
-            byte[] byteRead = this.serialPort.readBytes( BYTES_FOR_INFO );
-            // Extract the info according to the documentation.
-            //this.commandReceived = byteRead[0];
-            //this.outputModeReceived = byteRead[1];
-            this.sensorTemperatureReceived = byteRead[2];
-            this.driverTemperatureReceived = byteRead[3];
-            this.exposureTimeReceived = (
-                    ( byteRead[7] << 24 ) |
-                    ( (byteRead[6] & 0xFF) << 16 ) |
-                    ( (byteRead[5] & 0xFF) << 8 ) |
-                    (byteRead[4] & 0xFF) );
-            this.errorCodeReceived = byteRead[8];
-            //this.reserved1ByteReceived = byteRead[9];
-            this.rowsReceived = byteRead[10];
-            this.colsReceived = byteRead[11];
-            this.frameIdReceived = (short)( ( byteRead[13] << 8 ) | (byteRead[12] & 0xFF) );
-            //this.ispVersionReceived = byteRead[14];
-            //this.reserved3ByteReceived = byteRead[15];
-            // Update checksum.
-            for( int i=0; i<BYTES_FOR_INFO; i++ ) {
-                this.checksumComputed += byteRead[i];
-            }
-            // Initialize pixel counter.
-            this.pixelCounter = 0;
-            // And go to receive pixels.
-            this.receivingState = RECEIVING_PACKET_PIXELS_STATE;
+        // Get next 16 bytes.
+        byte[] nextBytes = new byte[ BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_INFO_STATE ] ];
+        this.byteBuffer.get( nextBytes );
+        // Extract the info according to the documentation.
+        //this.commandReceived = nextBytes[0];
+        //this.outputModeReceived = nextBytes[1];
+        this.sensorTemperatureReceived = nextBytes[2];
+        this.driverTemperatureReceived = nextBytes[3];
+        this.exposureTimeReceived = (
+                ( nextBytes[7] << 24 ) |
+                ( (nextBytes[6] & 0xFF) << 16 ) |
+                ( (nextBytes[5] & 0xFF) << 8 ) |
+                (nextBytes[4] & 0xFF) );
+        this.errorCodeReceived = nextBytes[8];
+        //this.reserved1ByteReceived = nextBytes[9];
+        this.rowsReceived = nextBytes[10];
+        this.colsReceived = nextBytes[11];
+        this.frameIdReceived = (short)( ( nextBytes[13] << 8 ) | (nextBytes[12] & 0xFF) );
+        //this.ispVersionReceived = byteRead[14];
+        //this.reserved3ByteReceived = byteRead[15];
+        // Update checksum.
+        for( int i=0; i<BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_INFO_STATE ]; i++ ) {
+            this.checksumComputed += nextBytes[i];
         }
+        // Initialize pixel counter.
+        this.pixelCounter = 0;
+        // And go to receive pixels.
+        this.receivingState = RECEIVING_PACKET_PIXELS_STATE;
     }
     
     
@@ -780,29 +785,25 @@ public class MaixSenseA010Driver
             throws SerialPortException
     {
         // Iterate while there are bytes to read and the pixels are still not complete.
-        int bytesToRead = this.serialPort.getInputBufferBytesCount();
+        int bytesToRead = this.byteBuffer.remaining();
         int bytesToCompletion = this.pixels.length - this.pixelCounter;
-        while(  bytesToRead > 0  &&  bytesToCompletion > 0  ) {
-            /* Store in bytesToRead the minimum of bytesToRead and bytesToCompletion.
-             * This makes that we don't read more bytes than bytes that are in the buffer (bytesToRead is minimum),
-             * or more bytes than bytes needed to complete the pixels.
-             */
-            if( bytesToRead > bytesToCompletion ) {
-                bytesToRead = bytesToCompletion;
-            }
-            // Read the bytes.
-            byte[] byteRead = this.serialPort.readBytes( bytesToRead );
-            // Iterate over the bytes.
-            for( int i=0; i<byteRead.length; i++ ) {
-                // Store the byte.
-                this.pixels[ this.pixelCounter ] = byteRead[i];
-                this.pixelCounter++;
-                // Update the checksum.
-                this.checksumComputed += byteRead[i];
-            }
-            // Update bytesToRead and bytesToCompletion for next iteration.
-            bytesToRead = this.serialPort.getInputBufferBytesCount();
-            bytesToCompletion = this.pixels.length - this.pixelCounter;
+        /* Store in bytesToRead the minimum of bytesToRead and bytesToCompletion.
+         * This makes that we don't read more bytes than bytes that are in the buffer (bytesToRead is minimum),
+         * or more bytes than bytes needed to complete the pixels.
+         */
+        if( bytesToRead > bytesToCompletion ) {
+            bytesToRead = bytesToCompletion;
+        }
+        // Read the bytes.
+        byte[] nextBytes = new byte[ bytesToRead ];
+        this.byteBuffer.get( nextBytes );
+        // Iterate over the bytes.
+        for( int i=0; i<nextBytes.length; i++ ) {
+            // Store the byte.
+            this.pixels[ this.pixelCounter ] = nextBytes[i];
+            this.pixelCounter++;
+            // Update the checksum.
+            this.checksumComputed += nextBytes[i];
         }
         // If we completed the pixels,
         if( this.pixelCounter == this.pixels.length ) {
@@ -822,10 +823,10 @@ public class MaixSenseA010Driver
     private void receiveChecksumBehavior()
             throws SerialPortException
     {
-        // Read next byte.
-        byte[] byteRead = this.serialPort.readBytes( 1 );
+        // Get next byte.
+        byte nextByte = this.byteBuffer.get();
         // If the checksum computed matches the received byte,
-        if( this.checksumComputed == byteRead[0] ) {
+        if( this.checksumComputed == nextByte ) {
             // create image and add it to the queue (if connected),
             if( this.queue != null ) {
                 MaixSenseA010Image image = this.getImageCurrent();
@@ -848,9 +849,9 @@ public class MaixSenseA010Driver
             throws SerialPortException
     {
         // Get next byte.
-        byte[] byteRead = this.serialPort.readBytes( 1 );
+        byte nextByte = this.byteBuffer.get();
         // If the received byte is 0xDD,
-        if( byteRead[0] == (byte)0xDD ) {
+        if( nextByte == (byte)0xDD ) {
             // go to receive first header byte.
             this.receivingState = RECEIVING_FIRST_HEADER_BYTE_STATE;
         }

@@ -194,7 +194,7 @@ public class MaixSenseA010Driver
     public MaixSenseA010Driver( String serialPortPath )
     {
         this.serialPort = new SerialPort( serialPortPath );
-        this.byteBuffer = ByteBuffer.allocate( 1 << 16 );
+        this.byteBuffer = ByteBuffer.allocateDirect( 1 << 16 );
         this.receivingState = 0;
         // Default initial value is LCD display on.
         this.disp = (byte)0b00000001;
@@ -564,7 +564,7 @@ public class MaixSenseA010Driver
             try {
                 this.updateFromInputBytes();
             } catch( SerialPortException e ) {
-                this.receivingState = 0;
+                this.receivingState = RECEIVING_TAIL_BYTE_STATE;
                 e.printStackTrace();
             }
         }

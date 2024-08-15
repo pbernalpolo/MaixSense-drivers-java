@@ -653,12 +653,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when first header byte is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receiveFirstHeaderByteBehavior()
-            throws SerialPortException
     {
         // Get next byte.
         byte nextByte = this.byteBuffer.get();
@@ -676,12 +673,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when second header byte is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receiveSecondHeaderByteBehavior()
-            throws SerialPortException
     {
         // Get next byte.
         byte nextByte = this.byteBuffer.get();
@@ -701,12 +695,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when packet length is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)} or {@link SerialPort#getInputBufferBytesCount()}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receivePacketLengthBehavior()
-            throws SerialPortException
     {
         // Get 2 bytes.
         byte[] nextBytes = new byte[ BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_LENGTH_STATE ] ];
@@ -736,12 +727,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when packet info is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)} or {@link SerialPort#getInputBufferBytesCount()}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receivePacketInfoBehavior()
-            throws SerialPortException
     {
         // Get next 16 bytes.
         byte[] nextBytes = new byte[ BYTES_NEEDED_FOR_STATE[ RECEIVING_PACKET_INFO_STATE ] ];
@@ -777,12 +765,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when packet pixels are being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)} or {@link SerialPort#getInputBufferBytesCount()}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receivePixelsBehavior()
-            throws SerialPortException
     {
         // Iterate while there are bytes to read and the pixels are still not complete.
         int bytesToRead = this.byteBuffer.remaining();
@@ -816,12 +801,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when checksum is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receiveChecksumBehavior()
-            throws SerialPortException
     {
         // Get next byte.
         byte nextByte = this.byteBuffer.get();
@@ -841,12 +823,9 @@ public class MaixSenseA010Driver
     /**
      * Implements behavior of finite-state machine when tail byte is being received.
      * 
-     * @throws SerialPortException  from {@link SerialPort#readBytes(int)}.
-     * 
      * @see #updateFromInputBytes()
      */
     private void receiveTailByteBehavior()
-            throws SerialPortException
     {
         // Get next byte.
         byte nextByte = this.byteBuffer.get();

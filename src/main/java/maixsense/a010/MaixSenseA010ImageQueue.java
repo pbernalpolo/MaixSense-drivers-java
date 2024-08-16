@@ -84,12 +84,10 @@ public class MaixSenseA010ImageQueue
      * 
      * @param image     {@link MaixSenseA010Image} to be added to the queue.
      */
-    public void add( MaixSenseA010Image image )
+    public synchronized void add( MaixSenseA010Image image )
     {
         this.queue.add( image );
-        synchronized( this ) {
-            this.notify();
-        }
+        this.notify();
     }
     
     
@@ -114,6 +112,7 @@ public class MaixSenseA010ImageQueue
     public synchronized void stop()
     {
         this.keepRunning = false;
+        this.notify();
     }
     
     
@@ -124,9 +123,11 @@ public class MaixSenseA010ImageQueue
     {
         while( this.keepRunning ) {
             while( !this.queue.isEmpty() ) {
-                MaixSenseA010Image image = this.queue.poll();
-                for( MaixSenseA010ImageConsumer consumer : this.listeners ) {
-                    consumer.consumeImage( image );
+                synchronized( this ) {
+                    MaixSenseA010Image image = this.queue.poll();
+                    for( MaixSenseA010ImageConsumer consumer : this.listeners ) {
+                        consumer.consumeImage( image );
+                    }
                 }
             }
             try {

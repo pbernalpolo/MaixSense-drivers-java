@@ -81,6 +81,19 @@ public class MaixSenseA010Driver
      */
     private static final int RECEIVING_TAIL_BYTE_STATE = 0;
     
+    /**
+     * Holds the bytes required to process data in each state of the finite-state machine.
+     * That is:
+     * <ul>
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_TAIL_BYTE_STATE} ] = 1 byte required to check if it is the tail byte.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_FIRST_HEADER_BYTE_STATE} ] = 1 byte required to check if it is the first header byte.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_SECOND_HEADER_BYTE_STATE} ] = 1 byte required to check if it is the second header byte.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_PACKET_LENGTH_STATE} ] = 2 bytes required to compose the packet length.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_PACKET_INFO_STATE} ] = 16 bytes required to build the packet info.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_PACKET_PIXELS_STATE} ] = 1 byte required to add pixels sequentially.
+     *  <li> {@link #BYTES_NEEDED_FOR_STATE}[ {@link #RECEIVING_CHECKSUM_STATE} ] = 1 byte required to compare against the computed checksum.
+     * </ul>
+     */
     private static final int[] BYTES_NEEDED_FOR_STATE = { 1 , 1 , 1 , 2 , 16 , 1 , 1 };
     
     
@@ -99,6 +112,10 @@ public class MaixSenseA010Driver
      */
     private MaixSenseA010ImageQueue queue;
     
+    /**
+     * {@link ByteBuffer} used to dump the content of the {@link SerialPort}.
+     * Dumping the content of the {@link SerialPort} to the {@link ByteBuffer} and then reading from such {@link ByteBuffer} is more efficient than reading directly from the {@link SerialPort} buffer.
+     */
     private ByteBuffer byteBuffer;
     
     /**
@@ -194,7 +211,9 @@ public class MaixSenseA010Driver
     public MaixSenseA010Driver( String serialPortPath )
     {
         this.serialPort = new SerialPort( serialPortPath );
+        // Create the ByteBuffer with a capacity that we don't expect to exceed.
         this.byteBuffer = ByteBuffer.allocateDirect( 1 << 16 );
+        // Initialize receivingState.
         this.receivingState = 0;
         // Default initial value is LCD display on.
         this.disp = (byte)0b00000001;
@@ -234,6 +253,8 @@ public class MaixSenseA010Driver
     public void terminate()
             throws SerialPortException
     {
+        this.serialPort.removeEventListener();
+        this.serialPort.purgePort( SerialPort.PURGE_RXCLEAR | SerialPort.PURGE_TXCLEAR );
         this.serialPort.closePort();
     }
     
@@ -748,7 +769,15 @@ public class MaixSenseA010Driver
         //this.reserved1ByteReceived = nextBytes[9];
         this.rowsReceived = nextBytes[10];
         this.colsReceived = nextBytes[11];
-        this.frameIdReceived = (short)( ( nextBytes[13] << 8 ) | (nextBytes[12] & 0xFF) );
+        short frameIdNew = (short)( ( nextBytes[13] << 8 ) | (nextBytes[12] & 0xFF) );
+        // Sometimes same image is received multiple times.
+        // If this happens, we save resources by ignoring the rest of the package.
+        if( frameIdNew != this.frameIdReceived ) {
+            this.frameIdReceived = frameIdNew;
+        } else {
+            this.receivingState = RECEIVING_TAIL_BYTE_STATE;
+            return;
+        }
         //this.ispVersionReceived = byteRead[14];
         //this.reserved3ByteReceived = byteRead[15];
         // Update checksum.

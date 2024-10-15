@@ -138,7 +138,7 @@ public class MaixSenseA010AsciiArtImageViewer
                 double pixelAverage = 0.0;
                 for( int ii=0; ii<PIXELS_PER_ASCII_CHAR; ii++ ) {
                     for( int jj=0; jj<PIXELS_PER_ASCII_CHAR; jj++ ) {
-                        pixelAverage += image.pixel( i + ii , j + jj ) & 0xFF ;
+                        pixelAverage += image.pixel( i + ii , j + jj );
                     }
                 }
                 pixelAverage /= PIXELS_PER_ASCII_CHAR * PIXELS_PER_ASCII_CHAR;

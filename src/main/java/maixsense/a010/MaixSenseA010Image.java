@@ -117,9 +117,9 @@ public class MaixSenseA010Image
      * @param j     y-coordinate of the pixel.
      * @return  value of the pixel located at (i,j).
      */
-    public byte pixel( int i , int j )
+    public int pixel( int i , int j )
     {
-        return this.pixels[ i * this.cols() + j ];
+        return ( this.pixels[ i * this.cols() + j ] & 0xFF );
     }
     
     

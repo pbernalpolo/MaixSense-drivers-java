@@ -92,6 +92,17 @@ public class MaixSenseA010ImageQueue
     
     
     /**
+     * Returns the current size of the queue.
+     * 
+     * @return  current size of the queue.
+     */
+    public int size()
+    {
+        return this.queue.size();
+    }
+    
+    
+    /**
      * Starts a thread in which the {@link MaixSenseA010Image}s will be consumed by the {@link MaixSenseA010ImageConsumer}s.
      */
     public synchronized void start()

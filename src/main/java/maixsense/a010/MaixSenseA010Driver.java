@@ -12,32 +12,27 @@ import jssc.SerialPortException;
  * Controls the MaixSense-A010 ToF camera.
  * <p>
  * The driver is used to send commands over the {@link SerialPort}.
- * It also implements {@link SerialPortEventListener} to receive {@link MaixSenseA010Image}s over the {@link SerialPort}.
- * The images are always received, but the only way for a user to access them is:
- * <ul>
- *  <li> Implementing the {@link MaixSenseA010ImageConsumer} interface,
- *  <li> connecting a {@link MaixSenseA010ImageQueue} to this driver, and
- *  <li> adding the {@link MaixSenseA010ImageConsumer} as a listener in the {@link MaixSenseA010ImageQueue}.
- * </ul>
- * See {@link DefaultConfigurationOfMaixSenseA010} for an example.
+ * It also implements {@link SerialPortEventListener} to receive MaixSense-A010 data over the serial port.
  * <p>
- * The image consumption is implemented using the producer-consumer design pattern.
+ * The way in which the received MaixSense-A010 data is processed is defined by a {@link MaixSenseA010DataProcessingStrategy}.
+ * This class is the Context in the Strategy Pattern.
  * 
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/maixsense-a010.html</a>
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/at_command_en.html</a>
  */
 public class MaixSenseA010Driver
     implements
-        SerialPortEventListener
+        SerialPortEventListener,
+        MaixSenseA010DataSource
 {
     ////////////////////////////////////////////////////////////////
     // PRIVATE VARIABLES
     ////////////////////////////////////////////////////////////////
     
     /**
-     * Finite-state machine that controls the image reception through the received bytes.
+     * {@link MaixSenseA010DataProcessingStrategy} used to process the data received through the serial port.
      */
-    private MaixSenseA010ImageReceptionFiniteStateMachine imageReceptionFiniteStateMachine;
+    private MaixSenseA010DataProcessingStrategy dataProcessingStrategy;
     
     /**
      * {@link SerialPort} over which the communication is established.
@@ -63,7 +58,6 @@ public class MaixSenseA010Driver
      */
     public MaixSenseA010Driver( String serialPortPath )
     {
-        this.imageReceptionFiniteStateMachine = new MaixSenseA010ImageReceptionFiniteStateMachine();
         this.serialPort = new SerialPort( serialPortPath );
         // Default initial value is LCD display on.
         this.disp = (byte)0b00000001;
@@ -74,6 +68,15 @@ public class MaixSenseA010Driver
     ////////////////////////////////////////////////////////////////
     // PUBLIC METHODS
     ////////////////////////////////////////////////////////////////
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void setDataProcessingStrategy( MaixSenseA010DataProcessingStrategy maixSenseA010DataProcessingStrategy )
+    {
+        this.dataProcessingStrategy = maixSenseA010DataProcessingStrategy;
+    }
+    
     
     /**
      * Initializes communication through the serial port.
@@ -106,17 +109,6 @@ public class MaixSenseA010Driver
         this.serialPort.removeEventListener();
         this.serialPort.purgePort( SerialPort.PURGE_RXCLEAR | SerialPort.PURGE_TXCLEAR );
         this.serialPort.closePort();
-    }
-    
-    
-    /**
-     * Connects the queue in which the received images are stored.
-     * 
-     * @param imageQueue    queue in which the received images are stored.
-     */
-    public void connectQueue( MaixSenseA010ImageQueue imageQueue )
-    {
-        this.imageReceptionFiniteStateMachine.connectQueue( imageQueue );
     }
     
     
@@ -442,10 +434,13 @@ public class MaixSenseA010Driver
     @Override
     public void serialEvent( SerialPortEvent event )
     {
-        if( event.isRXCHAR() ) {
+        if(  event.isRXCHAR()  &&  this.dataProcessingStrategy != null  ) {
             try {
                 byte[] receivedBytes = this.serialPort.readBytes();
-                this.imageReceptionFiniteStateMachine.update( receivedBytes , 0 , receivedBytes.length );
+                if( receivedBytes == null ) {
+                    return;
+                }
+                this.dataProcessingStrategy.process( receivedBytes , 0 , receivedBytes.length );
             } catch( SerialPortException e ) {
                 e.printStackTrace();
             }

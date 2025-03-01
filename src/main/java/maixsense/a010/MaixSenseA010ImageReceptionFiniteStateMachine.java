@@ -3,14 +3,13 @@ package maixsense.a010;
 
 
 /**
- * Manages the reception of images from a MaixSense-A010 ToF camera.
+ * Finite-state machine that turns bytes received from a MaixSense-A010 into {@link MaixSenseA010Image}s, and enqueues them in a {@link MaixSenseA010ImageQueue}.
  * <p>
- * The received images are enqueued in a {@link MaixSenseA010ImageQueue} if it has been previously connected.
- * The only way for a user to access such images is:
+ * The only way for a user to access the enqueued images is:
  * <ul>
  *  <li> Implementing the {@link MaixSenseA010ImageConsumer} interface,
  *  <li> adding the {@link MaixSenseA010ImageConsumer} as a listener in a {@link MaixSenseA010ImageQueue}, and
- *  <li> connecting the {@link MaixSenseA010ImageQueue} to this class.
+ *  <li> using the {@link MaixSenseA010ImageQueue} to create an instance of this class.
  * </ul>
  * <p>
  * The image consumption is implemented using the producer-consumer design pattern.
@@ -185,10 +184,14 @@ public class MaixSenseA010ImageReceptionFiniteStateMachine
     /**
      * Constructs a {@link MaixSenseA010ImageReceptionFiniteStateMachine}.
      */
-    public MaixSenseA010ImageReceptionFiniteStateMachine()
+    public MaixSenseA010ImageReceptionFiniteStateMachine( MaixSenseA010ImageQueue imageQueue )
     {
         // Initialize receivingState.
-        this.receivingState = 0;
+        this.receivingState = RECEIVING_TAIL_BYTE_STATE;
+        if( imageQueue == null ) {
+            throw new IllegalArgumentException( "Found null imageQueue." );
+        }
+        this.queue = imageQueue;
     }
     
     
@@ -196,18 +199,6 @@ public class MaixSenseA010ImageReceptionFiniteStateMachine
     ////////////////////////////////////////////////////////////////
     // PUBLIC METHODS
     ////////////////////////////////////////////////////////////////
-    
-    /**
-     * Connects the queue in which the received images are stored.
-     * 
-     * @param imageQueue    queue in which the received images are stored.
-     */
-    public void connectQueue( MaixSenseA010ImageQueue imageQueue )
-    {
-        this.queue = imageQueue;
-        this.queue.start();
-    }
-    
     
     /**
      * Updates the the state of the finite-state machine that manages the image packet reception.
@@ -481,11 +472,9 @@ public class MaixSenseA010ImageReceptionFiniteStateMachine
         byte nextByte = buffer[ indexStart ];
         // If the checksum computed matches the received byte,
         if( this.checksumComputed == nextByte ) {
-            // create image and add it to the queue (if connected),
-            if( this.queue != null ) {
-                MaixSenseA010Image image = this.getImageCurrent();
-                this.queue.add( image );
-            }
+            // create image and add it to the queue,
+            MaixSenseA010Image image = this.getImageCurrent();
+            this.queue.add( image );
         }
         // Whatever the result of the checksum, we go to receive the tail byte.
         this.receivingState = RECEIVING_TAIL_BYTE_STATE;

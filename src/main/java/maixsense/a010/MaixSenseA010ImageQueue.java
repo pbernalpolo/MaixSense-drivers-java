@@ -49,6 +49,7 @@ public class MaixSenseA010ImageQueue
         this.queue = new ArrayDeque<MaixSenseA010Image>();
         this.listeners = new ArrayList<MaixSenseA010ImageConsumer>();
         this.keepRunning = false;
+        this.start();
     }
     
     

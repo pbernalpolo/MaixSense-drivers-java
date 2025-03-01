@@ -16,45 +16,50 @@ public class DefaultConfigurationOfMaixSenseA010
      */
     public static void main( String[] args )
     {
-        MaixSenseA010Driver a010 = new MaixSenseA010Driver( "/dev/ttyUSB0" );
+        MaixSenseA010Driver driver = new MaixSenseA010Driver( "/dev/ttyUSB0" );
         
+        // Initialize serial communication.
         try {
-            
-            // Initialize serial communication.
-            a010.initialize();
-            
-            // Enables image processing.
-            a010.setImageSignalProcessorOn();
-            
-            // Disables LCD screen updating.
-            a010.setLcdDisplayOff();
-            // Enables communication of images through USB port.
-            a010.setUsbDisplayOn();
-            // Disables communication of images through UART.
-            a010.setUartDisplayOff();
-            
-            // Captured images will be 100 x 100.
-            a010.setBinning100x100();
-            
-            // Sets frames per second to 20 (images/second).
-            a010.setFps( 20 );
-            
-            // Sets the quantization unit used to relate the pixel value to a depth measurement.
-            a010.setQuantizationUnit( 0 );
-            
-            // Deactivates the anti-multi-machine interference.
-            a010.setAntiMultiMachineInterferenceOff();
-            
-            // Sets the exposure value to automatic exposure.
-            a010.setExposureTimeAutoOn();
-            
-            // Terminates the serial communication.
-            a010.terminate();
-            
+            driver.initialize();
         } catch( SerialPortException e ) {
             e.printStackTrace();
+            return;
         }
         
+        // Enables image processing.
+        driver.setImageSignalProcessorOn();
+        
+        // Disables LCD screen updating.
+        driver.setLcdDisplayOff();
+        // Enables communication of images through USB port.
+        driver.setUsbDisplayOn();
+        // Disables communication of images through UART.
+        driver.setUartDisplayOff();
+        
+        // Captured images will be 100 x 100.
+        driver.setBinning100x100();
+        
+        // Sets frames per second to 20 (images/second).
+        driver.setFps( 20 );
+        
+        // Sets the quantization unit used to relate the pixel value to a depth measurement.
+        driver.setQuantizationUnit( 0 );
+        
+        // Deactivates the anti-multi-machine interference.
+        driver.setAntiMultiMachineInterferenceOff();
+        
+        // Sets the exposure value to automatic exposure.
+        driver.setExposureTimeAutoOn();
+        
+        // Terminates the serial communication.
+        try {
+            driver.terminate();
+        } catch( SerialPortException e ) {
+            e.printStackTrace();
+            return;
+        }
+        
+        System.out.println( "Configuration successful." );
     }
 
 }

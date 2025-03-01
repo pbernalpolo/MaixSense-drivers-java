@@ -36,21 +36,6 @@ public class MaixSenseA010AsciiArtImageViewer
     
     
     
-    ////////////////////////////////////////////////////////////////
-    // VARIABLES
-    ////////////////////////////////////////////////////////////////
-    
-    /**
-     * Driver that receives the images from the first MaixSense-A010 and stores them in {@link #imageQueue}.
-     */
-    MaixSenseA010Driver tofCamera;
-    
-    /**
-     * Queue that stores the images received by the first MaixSense-A010.
-     */
-    MaixSenseA010ImageQueue imageQueue;
-    
-    
     
     ////////////////////////////////////////////////////////////////
     // MAIN: ENTRY POINT
@@ -67,22 +52,27 @@ public class MaixSenseA010AsciiArtImageViewer
     {
         MaixSenseA010AsciiArtImageViewer viewer = new MaixSenseA010AsciiArtImageViewer();
         
-        // Create the image queues,
-        viewer.imageQueue = new MaixSenseA010ImageQueue();
+        // Create the image queue,
+        MaixSenseA010ImageQueue imageQueue = new MaixSenseA010ImageQueue();
         // and add the listeners.
-        viewer.imageQueue.addListener( viewer );
+        imageQueue.addListener( viewer );
+        
+        // Create the MaixSense-A010 data processing strategy.
+        MaixSenseA010ImageEnqueuerStrategy imageEnqueuer = new MaixSenseA010ImageEnqueuerStrategy( imageQueue );
         
         // Create the driver,
-        viewer.tofCamera = new MaixSenseA010Driver( "/dev/ttyUSB0" );
-        // and connect the queue so that received images are added to it.
-        viewer.tofCamera.connectQueue( viewer.imageQueue );
-        
-        // Configure the MaixSense-A010 ToF cameras.
+        MaixSenseA010Driver driver = new MaixSenseA010Driver( "/dev/ttyUSB0" );
+        // initialize the communication,
         try {
-            viewer.configureCamera( viewer.tofCamera );
+            driver.initialize();
         } catch( SerialPortException e ) {
             e.printStackTrace();
+            return;
         }
+        // configure the MaixSense-A010 ToF camera.
+        configureCamera( driver );
+        // and set the data processing strategy.
+        driver.setDataProcessingStrategy( imageEnqueuer );
         
     }
     
@@ -91,34 +81,6 @@ public class MaixSenseA010AsciiArtImageViewer
     ////////////////////////////////////////////////////////////////
     // PUBLIC METHODS
     ////////////////////////////////////////////////////////////////
-    
-    /**
-     * Sets the configuration of a MaixSenseA010Driver.
-     * 
-     * @param driver    {@link MaixSenseA010Driver} to be configured.
-     * @throws SerialPortException  from {@link MaixSenseA010Driver} methods.
-     */
-    public void configureCamera( MaixSenseA010Driver driver )
-            throws SerialPortException
-    {
-        driver.initialize();
-        
-        driver.setImageSignalProcessorOn();
-        
-        driver.setLcdDisplayOff();
-        driver.setUsbDisplayOn();
-        driver.setUartDisplayOff();
-        
-        //driver.setBinning25x25();
-        driver.setBinning100x100();
-        driver.setFps( 20 );
-        
-        driver.setQuantizationUnit( QUANTIZATION_UNIT );
-        driver.setAntiMultiMachineInterferenceOff();
-        //driver.setAntiMultiMachineInterferenceOn();
-        driver.setExposureTimeAutoOn();
-    }
-    
     
     /**
      * {@inheritDoc}
@@ -145,6 +107,35 @@ public class MaixSenseA010AsciiArtImageViewer
             asciiArtString.append( "\n" );
         }
         System.out.println( asciiArtString );
+    }
+    
+    
+    
+    ////////////////////////////////////////////////////////////////
+    // PUBLIC STATIC METHODS
+    ////////////////////////////////////////////////////////////////
+    
+    /**
+     * Sets the configuration of a MaixSenseA010Driver.
+     * 
+     * @param driver    {@link MaixSenseA010Driver} to be configured.
+     */
+    public static void configureCamera( MaixSenseA010Driver driver )
+    {
+        driver.setImageSignalProcessorOn();
+        
+        driver.setLcdDisplayOff();
+        driver.setUsbDisplayOn();
+        driver.setUartDisplayOff();
+        
+        //driver.setBinning25x25();
+        driver.setBinning100x100();
+        driver.setFps( 20 );
+        
+        driver.setQuantizationUnit( QUANTIZATION_UNIT );
+        driver.setAntiMultiMachineInterferenceOff();
+        //driver.setAntiMultiMachineInterferenceOn();
+        driver.setExposureTimeAutoOn();
     }
     
 }

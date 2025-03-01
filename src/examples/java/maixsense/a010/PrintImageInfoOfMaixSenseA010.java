@@ -22,34 +22,29 @@ public class PrintImageInfoOfMaixSenseA010
         
         // Create the image queue,
         MaixSenseA010ImageQueue imageQueue = new MaixSenseA010ImageQueue();
-        // and add the listener.
+        // and add the listeners.
         imageQueue.addListener( printer );
         
-        // Create the driver,
-        MaixSenseA010Driver a010 = new MaixSenseA010Driver( "/dev/ttyUSB0" );
-        // and connect the queue so that received images are added to it.
-        a010.connectQueue( imageQueue );
+        // Create the MaixSense-A010 data processing strategy.
+        MaixSenseA010ImageEnqueuerStrategy imageEnqueuer = new MaixSenseA010ImageEnqueuerStrategy( imageQueue );
         
-        // Configure the MaixSense-A010 ToF camera.
+        // Create the driver,
+        MaixSenseA010Driver driver = new MaixSenseA010Driver( "/dev/ttyUSB0" );
+        
+        // initialize the driver communication,
         try {
-            a010.initialize();
-            
-            a010.setImageSignalProcessorOn();
-            
-            a010.setLcdDisplayOff();
-            a010.setUsbDisplayOn();
-            a010.setUartDisplayOff();
-            
-            a010.setBinning100x100();
-            a010.setFps( 20 );
-            a010.setQuantizationUnit( 0 );
-            a010.setAntiMultiMachineInterferenceOff();
-            //a010.setAntiMultiMachineInterferenceOn();
-            a010.setExposureTimeAutoOn();
-            
+            driver.initialize();
         } catch( SerialPortException e ) {
             e.printStackTrace();
+            return;
         }
+        
+        // configure the MaixSense-A010 ToF camera.
+        configureCamera( driver );
+        
+        // and set the data processing strategy.
+        driver.setDataProcessingStrategy( imageEnqueuer );
+        
     }
     
     
@@ -67,6 +62,35 @@ public class PrintImageInfoOfMaixSenseA010
         System.out.println( "Temperature driver: " + image.driverTemperature() );
         System.out.println( "Error code: " + image.errorCode() );
         System.out.println();
+    }
+    
+    
+    
+    ////////////////////////////////////////////////////////////////
+    // PUBLIC STATIC METHODS
+    ////////////////////////////////////////////////////////////////
+    
+    /**
+     * Sets the configuration of a MaixSenseA010Driver.
+     * 
+     * @param driver    {@link MaixSenseA010Driver} to be configured.
+     */
+    public static void configureCamera( MaixSenseA010Driver driver )
+    {
+        driver.setImageSignalProcessorOn();
+        
+        driver.setLcdDisplayOff();
+        driver.setUsbDisplayOn();
+        driver.setUartDisplayOff();
+        
+        //driver.setBinning25x25();
+        driver.setBinning100x100();
+        driver.setFps( 20 );
+        
+        driver.setQuantizationUnit( 0 );
+        driver.setAntiMultiMachineInterferenceOff();
+        //driver.setAntiMultiMachineInterferenceOn();
+        driver.setExposureTimeAutoOn();
     }
     
 }

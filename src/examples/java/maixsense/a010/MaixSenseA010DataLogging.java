@@ -40,7 +40,7 @@ public class MaixSenseA010DataLogging
     {
         // Create the MaixSense-A010 data processing strategy.
         String timestamp = new SimpleDateFormat( "yyyyMMdd_HHmmss" ).format( new Date() );
-        String fileName = "maixSenseA010_" + timestamp + ".log";
+        String fileName = "maixSenseA010_25x25_" + timestamp + ".log";
         MaixSenseA010DataLoggerStrategy dataLogger;
         try {
             dataLogger = new MaixSenseA010DataLoggerStrategy( fileName );
@@ -50,7 +50,7 @@ public class MaixSenseA010DataLogging
         }
         
         // Create the driver,
-        MaixSenseA010Driver driver = new MaixSenseA010Driver( "/dev/ttyUSB0" );
+        MaixSenseA010Driver driver = new MaixSenseA010Driver( "/dev/serial/by-id/usb-SIPEED_SIPEED_Meta_Sense_Lite_202206_08C75B-if00-port0" );
         
         // initialize the driver communication,
         try {
@@ -67,8 +67,8 @@ public class MaixSenseA010DataLogging
         driver.setUsbDisplayOn();
         driver.setUartDisplayOff();
         
-        //driver.setBinning25x25();
-        driver.setBinning100x100();
+        driver.setBinning25x25();
+        //driver.setBinning100x100();
         driver.setFps( 20 );
         
         driver.setQuantizationUnit( QUANTIZATION_UNIT );

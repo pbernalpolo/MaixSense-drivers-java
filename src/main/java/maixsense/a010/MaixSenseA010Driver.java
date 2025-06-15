@@ -22,8 +22,7 @@ import jssc.SerialPortException;
  */
 public class MaixSenseA010Driver
     implements
-        SerialPortEventListener,
-        MaixSenseA010DataSource
+        SerialPortEventListener
 {
     ////////////////////////////////////////////////////////////////
     // PRIVATE VARIABLES

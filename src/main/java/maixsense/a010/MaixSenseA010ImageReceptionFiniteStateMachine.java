@@ -4,15 +4,6 @@ package maixsense.a010;
 
 /**
  * Finite-state machine that turns bytes received from a MaixSense-A010 into {@link MaixSenseA010Image}s, and enqueues them in a {@link MaixSenseA010ImageQueue}.
- * <p>
- * The only way for a user to access the enqueued images is:
- * <ul>
- *  <li> Implementing the {@link MaixSenseA010ImageConsumer} interface,
- *  <li> adding the {@link MaixSenseA010ImageConsumer} as a listener in a {@link MaixSenseA010ImageQueue}, and
- *  <li> using the {@link MaixSenseA010ImageQueue} to create an instance of this class.
- * </ul>
- * <p>
- * The image consumption is implemented using the producer-consumer design pattern.
  * 
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/maixsense-a010.html</a>
  * @see <a href>https://wiki.sipeed.com/hardware/en/maixsense/maixsense-a010/at_command_en.html</a>

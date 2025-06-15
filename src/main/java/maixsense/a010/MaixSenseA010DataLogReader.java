@@ -94,6 +94,12 @@ public class MaixSenseA010DataLogReader
     }
     
     
+    /**
+     * Returns the next {@link MaixSenseA010Image} in the log file.
+     * 
+     * @return	next {@link MaixSenseA010Image} in the log file.
+     * @throws IOException	if an I/O error occurs.
+     */
     public MaixSenseA010Image nextImage() throws IOException
     {
     	while( this.imageQueue.size() < 1 ) {

@@ -67,7 +67,6 @@ public class MaixSenseA010Image
     }
     
     
-    
     /**
      * Constructs a {@link MaixSenseA010Image}.
      * 

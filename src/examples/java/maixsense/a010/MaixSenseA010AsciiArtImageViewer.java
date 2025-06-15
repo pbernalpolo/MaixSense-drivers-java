@@ -53,7 +53,7 @@ public class MaixSenseA010AsciiArtImageViewer
         MaixSenseA010AsciiArtImageViewer viewer = new MaixSenseA010AsciiArtImageViewer();
         
         // Create the image queue,
-        MaixSenseA010ImageQueue imageQueue = new MaixSenseA010ImageQueue();
+        MaixSenseA010ImagePublisherQueue imageQueue = new MaixSenseA010ImagePublisherQueue();
         // and add the listeners.
         imageQueue.addListener( viewer );
         

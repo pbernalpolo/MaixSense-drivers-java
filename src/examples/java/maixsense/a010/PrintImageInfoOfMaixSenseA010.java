@@ -21,7 +21,7 @@ public class PrintImageInfoOfMaixSenseA010
         PrintImageInfoOfMaixSenseA010 printer = new PrintImageInfoOfMaixSenseA010();
         
         // Create the image queue,
-        MaixSenseA010ImageQueue imageQueue = new MaixSenseA010ImageQueue();
+        MaixSenseA010ImagePublisherQueue imageQueue = new MaixSenseA010ImagePublisherQueue();
         // and add the listeners.
         imageQueue.addListener( printer );
         

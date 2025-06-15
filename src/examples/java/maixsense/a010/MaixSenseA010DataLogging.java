@@ -78,6 +78,9 @@ public class MaixSenseA010DataLogging
         
         // and set the data processing strategy.
         driver.setDataProcessingStrategy( dataLogger );
+        
+        // Print the location of the output file.
+        System.out.println( System.getProperty("user.dir") + "/" + fileName );
     }
     
 }
